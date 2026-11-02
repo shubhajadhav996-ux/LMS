@@ -1,0 +1,23 @@
+{
+  "name": "lms-trainer-portal-playwright",
+  "version": "1.0.0",
+  "description": "Playwright end-to-end tests for the LMS trainer portal",
+  "scripts": {
+    "test": "playwright test",
+    "test:stable": "playwright test --grep-invert @known-bug",
+    "test:known-bugs": "playwright test --grep @known-bug",
+    "test:headed": "playwright test --headed",
+    "test:ui": "playwright test --ui",
+    "report": "playwright show-report",
+    "typecheck": "tsc -p ."
+  },
+  "author": "",
+  "license": "ISC",
+  "devDependencies": {
+    "@playwright/test": "^1.63.0",
+    "@types/node": "^26.6.6",
+    "dotenv": "^18.0.9",
+    "typescript": "^7.0.2"
+  },
+  "private": true
+}

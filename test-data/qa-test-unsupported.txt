@@ -1,0 +1,1 @@
+QA Test plain text file. Uploads of .txt should be rejected.
