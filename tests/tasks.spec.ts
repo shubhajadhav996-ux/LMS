@@ -96,15 +96,15 @@ test.describe('Task Management', () => {
     await expect(row).toContainText(/assigned/i);
   });
 
-  test('@known-bug SCRUM-199 Edit and Delete are visible on first load', async ({ page }) => {
-    test.info().annotations.push({ type: 'issue', description: 'SCRUM-199: task row actions hidden until filters change' });
+  test('@known-bug SCRUM-200 Edit and Delete are visible on first load', async ({ page }) => {
+    test.info().annotations.push({ type: 'issue', description: 'SCRUM-200: task row actions hidden until filters change' });
     const row = tableRows(page).filter({ hasText: 'QA Test' }).first();
     await expect(row.locator('[title="Edit Task"]')).toBeVisible();
     await expect(row.locator('[title="Delete Task"]')).toBeVisible();
   });
 
-  test('@known-bug SCRUM-200 trainer can view task details', async ({ page }) => {
-    test.info().annotations.push({ type: 'issue', description: 'SCRUM-200: "Task details are available for admins only"' });
+  test('@known-bug SCRUM-199 trainer can view task details', async ({ page }) => {
+    test.info().annotations.push({ type: 'issue', description: 'SCRUM-199: "Task details are available for admins only"' });
     await tableRows(page).filter({ hasText: 'QA Test' }).first().locator('[title="View Task"]').click();
     await expect(page.getByText(/available for admins only/i)).toHaveCount(0);
     await expect(page.getByText(/^due date$/i)).toBeVisible();
@@ -113,17 +113,42 @@ test.describe('Task Management', () => {
   });
 
   test('@known-bug SCRUM-201 cannot create a task for a course with no students', async ({ page }) => {
-    test.skip(!env.runCreateTests, 'RUN_CREATE_TESTS=false (this check may create a task if the bug is present)');
+    test.skip(!env.runCreateTests, 'RUN_CREATE_TESTS=false (this check creates a task while the bug is present)');
     test.info().annotations.push({ type: 'issue', description: 'SCRUM-201: task saved with 0 recipients (0/0)' });
-    // "Testing Profile" has no active students. Expected: a warning and no task created.
+    // "Testing Profile" has no enrolled students. Expected: the app warns and does not save the task.
     const title = uniqueName('Zero recipients');
     await page.getByRole('button', { name: 'Create Task' }).first().click();
     const f = form(page);
     await f.getByPlaceholder(/Build a responsive landing page/).fill(title);
+    await f.locator('textarea').fill('QA Test: zero-recipient check. Safe to ignore.');
     await pickCourse(page, /testing\s+profile/i);
     await f.locator('input[type=datetime-local]').fill(isoDateTimeLocal(dateOffset(7), 18, 0));
+    const post = page
+      .waitForResponse((r) => /\/api\/v1\/tasks$/.test(r.url()) && r.request().method() === 'POST', { timeout: 20_000 })
+      .catch(() => null);
     await f.getByRole('button', { name: 'Create Task' }).click();
-    await page.waitForTimeout(4000);
-    await expect(tableRows(page).filter({ hasText: title }), 'a task with no recipients should not be saved').toHaveCount(0);
+    const res = await post;
+    if (res) {
+      test.info().annotations.push({ type: 'observed', description: `POST /tasks returned ${res.status()} ${(await res.text()).slice(0, 200)}` });
+      expect(res.ok(), 'server should refuse a task with no recipients').toBe(false);
+    } else {
+      await expect(f.getByText(/no students|no recipients|0 students/i)).toBeVisible();
+    }
+  });
+
+  test('@known-bug SCRUM-202 Description is optional when creating a task', async ({ page }) => {
+    test.skip(!env.runCreateTests, 'RUN_CREATE_TESTS=false');
+    test.info().annotations.push({ type: 'issue', description: 'Form says Description (optional) but the API returns 400 "Task description is required"' });
+    const title = uniqueName('Task no description');
+    await page.getByRole('button', { name: 'Create Task' }).first().click();
+    const f = form(page);
+    await f.getByPlaceholder(/Build a responsive landing page/).fill(title);
+    await pickCourse(page, /testing\s+profile/i);
+    await f.locator('input[type=datetime-local]').fill(isoDateTimeLocal(dateOffset(7), 16, 0));
+    const post = page.waitForResponse((r) => /\/api\/v1\/tasks$/.test(r.url()) && r.request().method() === 'POST');
+    await f.getByRole('button', { name: 'Create Task' }).click();
+    const res = await post;
+    expect(res.status(), await res.text()).toBe(201);
+    await expect(tableRows(page).filter({ hasText: title })).toHaveCount(1);
   });
 });

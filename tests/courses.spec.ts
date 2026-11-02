@@ -72,24 +72,41 @@ test.describe('My Courses', () => {
     await expect(page.getByRole('button', { name: 'Add batch' })).toBeVisible();
   });
 
-  test('@known-bug SCRUM-163 student count is consistent between My Courses and the course page', async ({ page }) => {
-    test.info().annotations.push({ type: 'issue', description: 'SCRUM-163: My Courses shows 0 students while the course batches list students' });
+  test('@known-bug SCRUM-163 course student count is a number and matches My Courses', async ({ page }) => {
+    test.info().annotations.push({ type: 'issue', description: 'SCRUM-163: My Courses / course page student counts disagree or show N/A' });
     const row = tableRows(page).filter({ hasText: COURSES.testingProfile });
     const listCount = Number((await row.locator('td').nth(3).innerText()).trim());
     await row.getByRole('link', { name: 'View course' }).click();
     const card = page.getByText('Total students', { exact: true }).locator('xpath=preceding-sibling::*[1]');
     await expect(card).toBeVisible();
     const cardText = (await card.innerText()).trim();
-    const batchStudents = await page
-      .locator('main tbody tr')
-      .evaluateAll((rows) => rows.map((r) => Number((r.querySelectorAll('td')[4]?.textContent || '0').trim()) || 0));
-    const sum = batchStudents.reduce((a, b) => a + b, 0);
-    test.info().annotations.push({
-      type: 'observed',
-      description: `My Courses=${listCount}, Total students card=${cardText}, sum of Students column in batches=${sum}`,
-    });
+    test.info().annotations.push({ type: 'observed', description: `My Courses=${listCount}, Total students card=${cardText}` });
     expect(cardText, 'Total students card should show a number').toMatch(/^\d+$/);
-    expect(Number(cardText), 'card should equal My Courses count').toBe(listCount);
-    expect(sum, 'students listed in batches should equal the course total').toBe(Number(cardText));
+    expect(Number(cardText)).toBe(listCount);
+  });
+
+  test('@known-bug SCRUM-203 course page Students column shows enrolled students, not capacity', async ({ page }) => {
+    test.info().annotations.push({ type: 'issue', description: 'Course page Batches table shows student capacity in the Students column' });
+    // Enrolled counts straight from the API (the session cookies are sent along).
+    const api = process.env.API_URL || 'https://lms-backend-gamma-six.vercel.app/api/v1';
+    const res = await page.request.get(`${api}/batches`);
+    expect(res.ok()).toBe(true);
+    const batches: Array<{ batchName: string; enrolledStudentsCount?: number; studentCapacity?: number }> = (await res.json()).data.batches;
+
+    await tableRows(page).filter({ hasText: COURSES.testingProfile }).getByRole('link', { name: 'View course' }).click();
+    const rows = page.locator('main tbody tr');
+    await expect(rows.first()).toBeVisible();
+    const shown = await rows.evaluateAll((trs) =>
+      trs.map((r) => ({
+        name: (r.querySelector('td a, td')?.textContent || '').trim(),
+        students: Number((r.querySelectorAll('td')[4]?.textContent || '').trim()),
+      })),
+    );
+    const mismatches = shown
+      .map((s) => ({ ...s, api: batches.find((b) => b.batchName.trim() === s.name) }))
+      .filter((s) => s.api && s.students !== (s.api.enrolledStudentsCount ?? 0))
+      .map((s) => `${s.name}: shows ${s.students}, enrolled ${s.api!.enrolledStudentsCount}, capacity ${s.api!.studentCapacity}`);
+    test.info().annotations.push({ type: 'observed', description: mismatches.join(' | ') || 'all match' });
+    expect(mismatches, 'Students column should equal enrolled students').toEqual([]);
   });
 });

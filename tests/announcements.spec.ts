@@ -106,7 +106,9 @@ test.describe('Announcements', () => {
 
   test('@known-bug SCRUM-179 Edit and Delete are visible for my own announcements on first load', async ({ page }) => {
     test.info().annotations.push({ type: 'issue', description: 'SCRUM-179: actions hidden until a filter is applied' });
-    const mine = tableRows(page).filter({ hasText: /QA Test - Course Students/ }).first();
+    // Any announcement I posted that is on page 1 (newest first), without touching filters or page size.
+    const mine = tableRows(page).filter({ hasText: /QA Test/ }).filter({ hasNot: page.locator('[title="Only your own announcements can be edited"]') }).first();
+    await expect(mine).toBeVisible();
     await expect(mine.locator('[title="Edit Announcement"]')).toBeVisible();
     await expect(mine.locator('[title="Delete Announcement"]')).toBeVisible();
   });

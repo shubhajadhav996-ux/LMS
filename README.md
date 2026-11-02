@@ -8,11 +8,11 @@ They cover the flows tested manually in October 2026:
 | File | What it checks |
 |---|---|
 | `tests/login.spec.ts` | Trainer login, wrong password, profile-completion redirect, student login error (SCRUM-162) |
-| `tests/courses.spec.ts` | My Courses list, admin-only actions, filters (course name, trainer, status), search, course page, student counts (SCRUM-163) |
+| `tests/courses.spec.ts` | My Courses list, admin-only actions, filters (course name, trainer, status), search, course page, student counts (SCRUM-163), Students column vs enrolled (SCRUM-203) |
 | `tests/batches.spec.ts` | Batch list, Create Batch validation, course list, create a batch, save time (SCRUM-164) |
 | `tests/course-content.spec.ts` | Course content sections, upload validation, upload a Draft PDF, Draft label in Course Material (SCRUM-165) |
 | `tests/announcements.spec.ts` | List, form validation, past schedule, .txt attachment, publish, title filter, Edit/Delete visibility (SCRUM-179, 180), Date sort (SCRUM-182) |
-| `tests/tasks.spec.ts` | List, form validation, past due date, batch scope, .txt attachment, create task, row actions (SCRUM-199), task details (SCRUM-200), zero-recipient task (SCRUM-201) |
+| `tests/tasks.spec.ts` | List, form validation, past due date, batch scope, .txt attachment, create task, task details (SCRUM-199), row actions (SCRUM-200), zero-recipient task (SCRUM-201), optional description (SCRUM-202) |
 
 ## Rules the suite follows
 
@@ -80,7 +80,14 @@ profile is completed.
 
 ## Known-bug mapping
 
-Jira numbers come from the earlier manual reports in this project. SCRUM-162 to 165 follow the
-order of the course bugs (login message, student count, slow Create Batch, Draft label);
-SCRUM-199 to 201 follow the task-management findings (row actions, view details, zero recipients).
-If a number is off, change it in the test title; the check itself does not depend on it.
+| Jira | Checked by |
+|---|---|
+| SCRUM-162 | Student login error message |
+| SCRUM-163 | Course student count is a number and matches My Courses |
+| SCRUM-164 | Create Batch saves within 3 seconds |
+| SCRUM-165 | Draft label in Course Material |
+| SCRUM-179 / 180 / 182 | Announcement actions on load, Delete on others' posts, Date sort |
+| SCRUM-199 / 200 / 201 | Task details for trainers, task actions on load, zero-recipient task |
+| SCRUM-202 | Task Description is optional |
+| SCRUM-203 | Course page Students column shows enrolled count |
+| SCRUM-205 | Profile-completion redirect (documented by `login.spec.ts`; the suite bypasses it) |
