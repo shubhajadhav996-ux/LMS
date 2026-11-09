@@ -4,3 +4,7 @@ playwright/.auth/
 test-results/
 playwright-report/
 blob-report/
+
+# QA scratch artifacts (Playwright MCP output, local screenshots)
+.playwright-mcp/
+shots/
