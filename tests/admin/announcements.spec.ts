@@ -101,7 +101,7 @@ test.describe('Admin: Announcements', () => {
 
   test.describe('layout at 1440 px', () => {
     test.use({ viewport: { width: 1440, height: 900 } });
-    test('row action buttons fit inside the window', async ({ page }) => {
+    test('@known-bug SCRUM-392 row action buttons fit inside the window', async ({ page }) => {
       const lastBtn = rows(page).first().locator('td').last().locator('button').last();
       await expect(lastBtn).toBeVisible();
       const box = await lastBtn.boundingBox();

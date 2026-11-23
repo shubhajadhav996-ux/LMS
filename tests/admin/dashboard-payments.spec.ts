@@ -36,7 +36,7 @@ test.describe('Admin: Dashboard', () => {
     expect(Number(all.replace(/\s+/g, ' ').match(/All\s*(\d+)/)![1])).toBe(dash);
   });
 
-  test('active trainer count on the dashboard matches Trainers page', async ({ page }) => {
+  test('@known-bug SCRUM-362 active trainer count on the dashboard matches Trainers page', async ({ page }) => {
     await page.goto('/admin/dashboard');
     const tile = (await page.getByRole('button', { name: /^Trainers \d/ }).first().innerText()).replace(/\s+/g, ' ');
     const dashActive = Number(tile.match(/(\d+) active/)![1]);
