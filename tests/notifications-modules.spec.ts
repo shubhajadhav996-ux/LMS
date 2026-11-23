@@ -99,7 +99,8 @@ const expectReadable = (n: AdminNotification) => {
 };
 
 test.describe('Notifications per module: trainer action -> admin inbox', () => {
-  test.describe.configure({ mode: 'serial' });
+  // Not serial: a @known-bug failure must not stop the tests after it. Playwright starts a fresh worker
+  // after a failure, which clears the shared state below, so each test re-creates what it needs.
   test.skip(!admin.email || !admin.password, 'Set ADMIN_EMAIL and ADMIN_PASSWORD in .env');
   test.skip(!env.runCreateTests, 'RUN_CREATE_TESTS=false');
 
@@ -115,6 +116,27 @@ test.describe('Notifications per module: trainer action -> admin inbox', () => {
   test.afterAll(async () => {
     await adminCtx?.context.close();
   });
+
+  /** Create the run's QA batch (reused by the session and batch tests while the worker lives). */
+  async function createBatch(page: Page) {
+    batchName = uniqueName('Notify Batch');
+    const r = await api(page, 'POST', '/batches', {
+      batchName,
+      course: courseId,
+      mode: 'offline',
+      startDate: '2027-01-04',
+      endDate: '2027-01-29',
+      studentCapacity: 10,
+      instructors: [trainerId],
+      scheduleSlots: [{ dayOfWeek: 'saturday', startTime: '01:00', endTime: '02:00' }],
+    });
+    ok(r, 'create batch');
+    batchId = r.json?.data?.batch?._id || r.json?.data?._id;
+    expect(batchId).toBeTruthy();
+  }
+  const ensureBatch = async (page: Page) => {
+    if (!batchId) await createBatch(page);
+  };
 
   test.beforeEach(async ({ page }) => {
     await page.goto('/trainer/dashboard');
@@ -153,26 +175,13 @@ test.describe('Notifications per module: trainer action -> admin inbox', () => {
 
   test('batch: create', async ({ page }) => {
     const since = new Date().toISOString();
-    batchName = uniqueName('Notify Batch');
-    const r = await api(page, 'POST', '/batches', {
-      batchName,
-      course: courseId,
-      mode: 'offline',
-      startDate: '2027-01-04',
-      endDate: '2027-01-29',
-      studentCapacity: 10,
-      instructors: [trainerId],
-      scheduleSlots: [{ dayOfWeek: 'saturday', startTime: '01:00', endTime: '02:00' }],
-    });
-    ok(r, 'create batch');
-    batchId = r.json?.data?.batch?._id || r.json?.data?._id;
-    expect(batchId).toBeTruthy();
+    await createBatch(page);
     const n = await waitForAdminNotification(adminCtx.page, 'BATCH_CREATED', batchName, since);
     expectReadable(n);
   });
 
   test('session: create, edit, delete', async ({ page }) => {
-    test.skip(!batchId, 'needs the batch from the previous test');
+    await ensureBatch(page);
     const since = new Date().toISOString();
     const topic = uniqueName('Notify Session');
     ok(
@@ -193,7 +202,7 @@ test.describe('Notifications per module: trainer action -> admin inbox', () => {
 
   test('@known-bug session edit notification names the batch', async ({ page }) => {
     test.info().annotations.push({ type: 'issue', description: 'SESSION_UPDATED says in batch "batch" (or a raw batch ID) instead of the batch name' });
-    test.skip(!batchId, 'needs the batch from the previous tests');
+    await ensureBatch(page);
     const since = new Date().toISOString();
     const topic = uniqueName('Notify Session Name');
     ok(await api(page, 'POST', `/batches/${batchId}/schedule`, { sessionDate: '2027-01-11', startTime: '05:00', endTime: '06:00', topicCovered: topic, title: topic }), 'create session');
@@ -206,7 +215,7 @@ test.describe('Notifications per module: trainer action -> admin inbox', () => {
 
   test('@known-bug batch edit notification names the batch', async ({ page }) => {
     test.info().annotations.push({ type: 'issue', description: 'BATCH_UPDATED says batch "undefined"' });
-    test.skip(!batchId, 'needs the batch from the previous tests');
+    await ensureBatch(page);
     const since = new Date().toISOString();
     ok(await api(page, 'PATCH', `/batches/${batchId}`, { studentCapacity: 12 }), 'edit batch');
     const n = await waitForAdminNotification(adminCtx.page, 'BATCH_UPDATED', '', since);
@@ -216,7 +225,7 @@ test.describe('Notifications per module: trainer action -> admin inbox', () => {
 
   test('@known-bug batch cancel notification names the batch', async ({ page }) => {
     test.info().annotations.push({ type: 'issue', description: 'BATCH_STATUS_CHANGED says cancelled batch "undefined"' });
-    test.skip(!batchId, 'needs the batch from the previous tests');
+    await ensureBatch(page);
     const since = new Date().toISOString();
     ok(await api(page, 'PATCH', `/batches/${batchId}/status`, { status: 'cancelled', cancellationReason: 'QA Test notification check' }), 'cancel batch');
     const n = await waitForAdminNotification(adminCtx.page, 'BATCH_STATUS_CHANGED', 'QA Test notification check', since);
@@ -416,7 +425,10 @@ test.describe('Notifications: trainer bell bugs', () => {
     test.info().annotations.push({ type: 'issue', description: 'read/deleted state is only in localStorage and is wiped on logout' });
     await page.goto('/trainer/notifications');
     await expect(page.getByLabel('Notification inbox')).toBeVisible();
-    await page.getByRole('button', { name: /mark all read/i }).click();
+    const markAll = page.getByRole('button', { name: /mark all read/i });
+    await expect(markAll).toBeVisible();
+    await page.waitForTimeout(2_000); // let the feed load; the button is disabled when nothing is unread
+    if (await markAll.isEnabled()) await markAll.click();
     await expect(page.locator('button[title="Notifications"]').first()).toHaveAttribute('aria-label', 'Notifications');
     // A fresh sign-in starts with empty localStorage, like logging out and in or another device.
     await page.evaluate(() => {

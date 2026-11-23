@@ -39,6 +39,13 @@ export const COURSES = {
  */
 export async function applyProfileGateBypass(context: BrowserContext) {
   if (!env.bypassProfileGate) return;
+  // The portal now works out missing profile fields itself and redirects once per browser session,
+  // remembered in this sessionStorage flag. Setting it up front skips the redirect (browser-only).
+  await context.addInitScript(() => {
+    try {
+      sessionStorage.setItem('trainer-profile-redirected', '1');
+    } catch {}
+  });
   await context.route(/\/api\/v1\/(users\/me|users\/atlogin|trainers\/me)(\?.*)?$/, async (route) => {
     let response;
     try {
@@ -50,7 +57,7 @@ export async function applyProfileGateBypass(context: BrowserContext) {
     body = body
       .replace(/"trainerProfileComplete":false/g, '"trainerProfileComplete":true')
       .replace(/"profileComplete":false/g, '"profileComplete":true')
-      .replace(/"(trainerProfileCompletionPercentage|profileCompletionPercentage)":\d+/g, '"$1":100');
+      .replace(/"(trainerProfileCompletionPercentage|profileCompletionPercentage|completionPercentage)":\d+/g, '"$1":100');
     await route.fulfill({ response, body }).catch(() => {});
   });
 }

@@ -23,6 +23,8 @@ const admin = { email: process.env.ADMIN_EMAIL || '', password: process.env.ADMI
 const COURSE = new RegExp(process.env.NOTIFY_COURSE || 'this for trainer course and batches', 'i');
 /** The feed refreshes every 60 s; reloading is faster, but allow time for the backend. */
 const ARRIVAL_TIMEOUT = 120_000;
+/** A course the test trainer is assigned to, used for admin -> trainer announcements. */
+const TRAINER_COURSE = new RegExp(process.env.NOTIFY_TRAINER_COURSE || 'QA Test Notif Course', 'i');
 
 const bell = (page: Page) => page.locator('header button[title="Notifications"], button[title="Notifications"]').first();
 
@@ -208,16 +210,16 @@ test.describe('Notifications: admin to trainer (two browsers)', () => {
     const title = uniqueName('Notify Admin Announcement');
     try {
       await a.page.goto('/admin/announcements');
-      await a.page.getByRole('button', { name: 'Create Announcement' }).first().click();
+      await a.page.getByRole('button', { name: /^(add|create) announcement$/i }).first().click();
       const f = a.page.locator('form').filter({ has: a.page.locator('input[name=title]') }).last();
       await f.locator('input[name=title]').fill(title);
       await f.locator('textarea[name=description]').fill(`${title}: automated notification check, please ignore.`);
-      // Only the trainers of "Testing Profile" (the test trainer's course), not every trainer.
+      // Only the trainers of NOTIFY_TRAINER_COURSE (a course the test trainer is assigned to), not every trainer.
       const scope = f.locator('select:has(option[value="course"])').first();
       if (await scope.count()) await scope.selectOption('course');
-      await f.locator('select[name=audienceTarget]').selectOption('trainers');
       await f.getByText('Select course...').click();
-      await f.locator('div', { has: a.page.locator('input[type=radio]') }).filter({ hasText: /testing\s+profile/i }).last().click();
+      await f.locator('div', { has: a.page.locator('input[type=radio]') }).filter({ hasText: TRAINER_COURSE }).last().click();
+      await f.locator('select[name=audienceTarget]').selectOption('trainers');
       await f.locator('select[name=priority]').selectOption('normal');
       await f.getByRole('button', { name: 'Publish' }).click();
       await expect(f).toBeHidden({ timeout: 30_000 });
@@ -248,9 +250,12 @@ test.describe('Notifications: opening a notification', () => {
       description: 'Bell links to /trainer/announcements?id=..., but the Announcements page only reads ?announcementId=..., so it lands on page 1 of the list.',
     });
     await page.goto('/trainer/notifications');
-    await page.getByLabel('Notification inbox').locator('select').last().selectOption('100');
-    const last = page.getByRole('list', { name: 'Notifications' }).locator('li').last();
-    const title = (await last.locator('.font-bold').first().innerText()).trim();
+    // The page-size picker sits under the list, outside the inbox section.
+    await page.locator('select:has(option[value="100"])').first().selectOption('100');
+    const last = page.getByRole('list', { name: 'Notifications' }).locator('li').filter({ hasText: 'Announcements' }).last();
+    const label = (await last.locator('button[aria-label^="Delete notification: "]').getAttribute('aria-label')) || '';
+    const title = label.replace('Delete notification: ', '').trim();
+    expect(title, 'need at least one announcement notification').not.toBe('');
     await last.locator('button').first().click();
     await expect(page).toHaveURL(/\/trainer\/announcements/);
     await expect(page.locator('main tbody tr', { hasText: title }).first(), 'the opened announcement should be shown').toBeInViewport();
