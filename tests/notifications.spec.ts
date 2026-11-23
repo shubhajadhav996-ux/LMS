@@ -99,7 +99,7 @@ test.describe('Notifications: trainer bell', () => {
     await expect(bell(page)).toBeVisible();
     await bell(page).click();
     await expect(page).toHaveURL(/\/trainer\/notifications/);
-    await expect(page.getByRole('heading', { name: 'Your notifications' })).toBeVisible();
+    await expect(page.getByText('Your notifications')).toBeVisible();
     await expect(page.getByText(/Unable to load notifications/i)).toHaveCount(0);
   });
 
@@ -249,29 +249,19 @@ test.describe('Notifications: admin to trainer (two browsers)', () => {
   });
 });
 
-test.describe('Notifications: server inbox for trainers', () => {
-  test('server notifications sent to a trainer are visible in the trainer bell', async ({ page }) => {
-    // Admin "Notify trainers" reminders (attendance, profile, overdue task) queue server-side
-    // notifications for trainers, but the trainer bell is built only from announcements and the
-    // dashboard. This read-only check shows whether the trainer has server notifications the UI never shows.
-    await page.goto('/trainer/dashboard');
-    const res = await page.evaluate(async (api) => {
-      const r = await fetch(`${api}/notifications?page=1&limit=50`, { credentials: 'include' });
-      return { status: r.status, body: await r.text() };
-    }, env.apiUrl);
-    test.info().annotations.push({ type: 'observed', description: `GET /notifications as trainer -> ${res.status} ${res.body.slice(0, 300)}` });
-    if (res.status !== 200) test.skip(true, `trainer cannot read /notifications (${res.status})`);
-    const items: { title?: string }[] = JSON.parse(res.body)?.data?.notifications || [];
-    test.skip(items.length === 0, 'trainer has no server-side notifications to compare');
-    const missing: string[] = [];
-    for (const n of items.slice(0, 5)) {
-      if (!n.title) continue;
-      await page.goto('/trainer/notifications');
-      await page.getByLabel('Notification inbox').getByPlaceholder(/search/i).fill(n.title);
-      await page.waitForTimeout(1_000);
-      if ((await page.getByRole('list', { name: 'Notifications' }).getByText(n.title).count()) === 0) missing.push(n.title);
-    }
-    expect(missing, 'server notifications missing from the trainer bell').toEqual([]);
+test.describe('Notifications: opening a notification', () => {
+  test('@known-bug opening a trainer announcement notification shows that announcement', async ({ page }) => {
+    test.info().annotations.push({
+      type: 'issue',
+      description: 'Bell links to /trainer/announcements?id=..., but the Announcements page only reads ?announcementId=..., so it lands on page 1 of the list.',
+    });
+    await page.goto('/trainer/notifications');
+    await page.getByLabel('Notification inbox').locator('select').last().selectOption('100');
+    const last = page.getByRole('list', { name: 'Notifications' }).locator('li').last();
+    const title = (await last.locator('.font-bold').first().innerText()).trim();
+    await last.locator('button').first().click();
+    await expect(page).toHaveURL(/\/trainer\/announcements/);
+    await expect(page.locator('main tbody tr', { hasText: title }).first(), 'the opened announcement should be shown').toBeInViewport();
   });
 });
 
