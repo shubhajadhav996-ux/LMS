@@ -13,6 +13,7 @@ They cover the flows tested manually in October 2026:
 | `tests/course-content.spec.ts` | Course content sections, upload validation, upload a Draft PDF, Draft label in Course Material (SCRUM-165) |
 | `tests/announcements.spec.ts` | List, form validation, past schedule, .txt attachment, publish, title filter, Edit/Delete visibility (SCRUM-179, 180), Date sort (SCRUM-182) |
 | `tests/tasks.spec.ts` | List, form validation, past due date, batch scope, .txt attachment, create task, task details (SCRUM-199), row actions (SCRUM-200), zero-recipient task (SCRUM-201), optional description (SCRUM-202) |
+| `tests/notifications.spec.ts` | Two-browser notification checks: trainer bell and page, trainer → student (announcement, new task, read state), admin → trainer announcement, trainer → admin profile-update request, server notifications missing from the trainer bell. Needs `ADMIN_*` / `STUDENT_*` in `.env`; tests without them are skipped |
 
 ## Rules the suite follows
 
