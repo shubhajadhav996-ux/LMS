@@ -16,7 +16,7 @@ test.describe('Announcements', () => {
   test.beforeEach(async ({ page }) => {
     await page.goto('/trainer/dashboard');
     await openSection(page, 'Announcements');
-    await expect(page.getByRole('heading', { name: 'Announcements', exact: true })).toBeVisible();
+    await expect(page.getByRole('heading', { name: 'Announcement Management' })).toBeVisible();
     await expect(tableRows(page).first()).toBeVisible();
   });
 
@@ -27,7 +27,7 @@ test.describe('Announcements', () => {
   });
 
   test('form validation: empty form shows required errors', async ({ page }) => {
-    await page.getByRole('button', { name: 'Create Announcement' }).first().click();
+    await page.getByRole('button', { name: 'Add announcement' }).first().click();
     const f = form(page);
     await f.getByRole('button', { name: 'Publish' }).click();
     await expect(f.getByText('Announcement title is required')).toBeVisible();
@@ -37,7 +37,7 @@ test.describe('Announcements', () => {
   });
 
   test('form validation: whitespace-only title is rejected', async ({ page }) => {
-    await page.getByRole('button', { name: 'Create Announcement' }).first().click();
+    await page.getByRole('button', { name: 'Add announcement' }).first().click();
     const f = form(page);
     await f.locator('input[name=title]').fill('   ');
     await f.locator('textarea[name=description]').fill('   ');
@@ -47,7 +47,7 @@ test.describe('Announcements', () => {
   });
 
   test('form validation: title limited to 150 and message to 1000 characters', async ({ page }) => {
-    await page.getByRole('button', { name: 'Create Announcement' }).first().click();
+    await page.getByRole('button', { name: 'Add announcement' }).first().click();
     const f = form(page);
     await f.locator('input[name=title]').fill('A'.repeat(160));
     await f.locator('textarea[name=description]').fill('B'.repeat(1010));
@@ -57,7 +57,7 @@ test.describe('Announcements', () => {
   });
 
   test('a scheduled date in the past is rejected', async ({ page }) => {
-    await page.getByRole('button', { name: 'Create Announcement' }).first().click();
+    await page.getByRole('button', { name: 'Add announcement' }).first().click();
     const f = form(page);
     await f.locator('input[name=title]').fill(uniqueName('Past schedule (should not save)'));
     await f.locator('textarea[name=description]').fill('QA Test: should be rejected');
@@ -70,7 +70,7 @@ test.describe('Announcements', () => {
   });
 
   test('a .txt attachment is rejected', async ({ page }) => {
-    await page.getByRole('button', { name: 'Create Announcement' }).first().click();
+    await page.getByRole('button', { name: 'Add announcement' }).first().click();
     const f = form(page);
     await f.locator('input[type=file]').setInputFiles(TXT);
     await expect(page.getByText(/not allowed|unsupported|invalid file|only pdf/i).first()).toBeVisible();
@@ -80,7 +80,7 @@ test.describe('Announcements', () => {
   test('publish a "QA Test" announcement to the trainers of Testing Profile', async ({ page }) => {
     test.skip(!env.runCreateTests, 'RUN_CREATE_TESTS=false');
     const title = uniqueName('Announcement');
-    await page.getByRole('button', { name: 'Create Announcement' }).first().click();
+    await page.getByRole('button', { name: 'Add announcement' }).first().click();
     const f = form(page);
     await f.locator('input[name=title]').fill(title);
     await f.locator('textarea[name=description]').fill(`${title}: automated QA check, please ignore.`);

@@ -1,6 +1,6 @@
 # LMS trainer portal: Playwright tests
 
-End-to-end tests (TypeScript + Playwright) for the trainer side of the LMS at
+End-to-end tests (TypeScript + Playwright) for the trainer and admin sides of the LMS at
 https://lms-website-lyart.vercel.app (trainers sign in at `/atlogin`).
 
 They cover the flows tested manually in October 2026:
@@ -14,13 +14,15 @@ They cover the flows tested manually in October 2026:
 | `tests/announcements.spec.ts` | List, form validation, past schedule, .txt attachment, publish, title filter, Edit/Delete visibility (SCRUM-179, 180), Date sort (SCRUM-182) |
 | `tests/tasks.spec.ts` | List, form validation, past due date, batch scope, .txt attachment, create task, task details (SCRUM-199), row actions (SCRUM-200), zero-recipient task (SCRUM-201), optional description (SCRUM-202) |
 | `tests/notifications.spec.ts` | Two-browser notification checks: trainer bell and page, trainer → student (announcement, new task, read state), admin → trainer announcement, trainer → admin profile-update request, server notifications missing from the trainer bell. Needs `ADMIN_*` / `STUDENT_*` in `.env`; tests without them are skipped |
+| `tests/trainer-crud.spec.ts` | Trainer create / edit / delete in every module: batch (create, edit, cancel), announcement (draft, edit, publish, delete), task (incl. "no students" guard), course material link, assignment |
+| `tests/admin/*.spec.ts` | **Admin portal** (project `admin`, logs in with `ADMIN_*`): Dashboard tiles and counts, Students, Courses, Trainers, Batches, Course Materials, Announcements, Task Management, Subscription Plans (create / edit / delete each), Payments (read only, refunds are never clicked) |
 | `tests/notifications-modules.spec.ts` | Per module, trainer action → admin inbox: announcement, batch, session, assignment, lesson plan, resource (create / edit / delete), task, profile request. Admin inbox count, category filter, search. Known bugs: batch "undefined", session batch name, task not notified, search 500, payment filter, own-announcement and lost read state on the trainer bell. Needs `ADMIN_*` |
 
 ## Rules the suite follows
 
 - **Credentials live only in `.env`**, which is git-ignored. `.env.example` shows the keys.
 - **Everything it creates starts with `QA Test`** plus a time stamp (for example `QA Test Batch 0211-0547`).
-- **It never deletes or edits existing data.** Set `RUN_CREATE_TESTS=false` to skip the tests that create records.
+- **It never deletes or edits existing data.** The create / edit / delete tests change only the "QA Test" records they create themselves, and delete them again. Admin-created trainers cannot be deleted (there is no Delete for trainers), so each admin run leaves one "QA Test Trainer" behind. Set `RUN_CREATE_TESTS=false` to skip the tests that create records.
 - Tests tagged **`@known-bug`** check the *correct* behaviour for a bug already filed in Jira. They fail while the bug is open and start passing once it is fixed. Run `npm run test:stable` to leave them out.
 
 ## Profile-completion gate (important)
@@ -50,6 +52,7 @@ profile is completed.
    ```bash
    npx playwright test
    ```
+   Run one side only with `npx playwright test --project=admin` or `--project=chromium` (trainer).
    Then open the HTML report with `npx playwright show-report`.
 
 ### With the Playwright extension (click-to-run)

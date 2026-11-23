@@ -5,6 +5,7 @@ import * as path from 'path';
 dotenv.config({ path: path.resolve(__dirname, '.env') });
 
 export const AUTH_FILE = path.join(__dirname, 'playwright/.auth/trainer.json');
+export const ADMIN_AUTH_FILE = path.join(__dirname, 'playwright/.auth/admin.json');
 
 export default defineConfig({
   testDir: './tests',
@@ -24,12 +25,20 @@ export default defineConfig({
     video: 'retain-on-failure',
   },
   projects: [
-    { name: 'setup', testMatch: /auth\.setup\.ts/ },
+    { name: 'setup', testMatch: /(^|\/)auth\.setup\.ts/ },
     {
       name: 'chromium',
       use: { ...devices['Desktop Chrome'], viewport: { width: 1440, height: 900 }, storageState: AUTH_FILE },
       dependencies: ['setup'],
-      testIgnore: /auth\.setup\.ts/,
+      testIgnore: [/auth\.setup\.ts/, /tests\/admin\//],
+    },
+    { name: 'admin-setup', testMatch: /admin\.setup\.ts/ },
+    {
+      name: 'admin',
+      testDir: './tests/admin',
+      testIgnore: /admin\.setup\.ts/,
+      use: { ...devices['Desktop Chrome'], viewport: { width: 1440, height: 900 }, storageState: ADMIN_AUTH_FILE },
+      dependencies: ['admin-setup'],
     },
   ],
 });

@@ -29,7 +29,7 @@ test.describe('Batches', () => {
   test.beforeEach(async ({ page }) => {
     await page.goto('/trainer/dashboard');
     await openSection(page, 'Batches');
-    await expect(page.getByRole('heading', { name: 'Batches', exact: true })).toBeVisible();
+    await expect(page.getByRole('heading', { name: 'Batches', exact: true, level: 1 })).toBeVisible();
   });
 
   test('batch list loads', async ({ page }) => {
