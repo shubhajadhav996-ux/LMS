@@ -156,14 +156,6 @@ test.describe('Notifications: trainer to student (two browsers)', () => {
     }
   });
 
-  test('trainer does not get a notification for their own announcement', async ({ page }) => {
-    test.skip(!env.runCreateTests, 'RUN_CREATE_TESTS=false');
-    await page.goto('/trainer/notifications');
-    await expect(page.getByLabel('Notification inbox')).toBeVisible();
-    await page.getByLabel('Notification inbox').getByPlaceholder(/search/i).fill('QA Test Notify Announcement');
-    await expect(page.getByRole('list', { name: 'Notifications' }).getByText(/QA Test Notify Announcement/)).toHaveCount(0);
-  });
-
   test('new task for the course shows "New task assigned" to the student', async ({ page, browser }) => {
     test.skip(!env.runCreateTests, 'RUN_CREATE_TESTS=false');
     const s = await loginStudent(browser);

@@ -14,6 +14,7 @@ They cover the flows tested manually in October 2026:
 | `tests/announcements.spec.ts` | List, form validation, past schedule, .txt attachment, publish, title filter, Edit/Delete visibility (SCRUM-179, 180), Date sort (SCRUM-182) |
 | `tests/tasks.spec.ts` | List, form validation, past due date, batch scope, .txt attachment, create task, task details (SCRUM-199), row actions (SCRUM-200), zero-recipient task (SCRUM-201), optional description (SCRUM-202) |
 | `tests/notifications.spec.ts` | Two-browser notification checks: trainer bell and page, trainer → student (announcement, new task, read state), admin → trainer announcement, trainer → admin profile-update request, server notifications missing from the trainer bell. Needs `ADMIN_*` / `STUDENT_*` in `.env`; tests without them are skipped |
+| `tests/notifications-modules.spec.ts` | Per module, trainer action → admin inbox: announcement, batch, session, assignment, lesson plan, resource (create / edit / delete), task, profile request. Admin inbox count, category filter, search. Known bugs: batch "undefined", session batch name, task not notified, search 500, payment filter, own-announcement and lost read state on the trainer bell. Needs `ADMIN_*` |
 
 ## Rules the suite follows
 
