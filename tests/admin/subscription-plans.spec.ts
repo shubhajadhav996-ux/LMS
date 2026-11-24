@@ -49,7 +49,7 @@ test.describe('Admin: Subscription Plans', () => {
     expect(cr.status(), await cr.text()).toBeLessThan(300);
     await expect(f).toBeHidden({ timeout: 30_000 });
 
-    await page.getByPlaceholder(/Search/).last().fill(name);
+    await page.getByPlaceholder(/Search plans/).fill(name);
     let row = rows(page).filter({ hasText: name });
     await expect(row).toHaveCount(1);
     await expect(row).toContainText(/Draft/i);
