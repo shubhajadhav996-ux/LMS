@@ -22,7 +22,7 @@ They cover the flows tested manually in October 2026:
 
 - **Credentials live only in `.env`**, which is git-ignored. `.env.example` shows the keys.
 - **Everything it creates starts with `QA Test`** plus a time stamp (for example `QA Test Batch 0211-0547`).
-- **It never deletes or edits existing data.** The create / edit / delete tests change only the "QA Test" records they create themselves, and delete them again. Admin-created trainers cannot be deleted (there is no Delete for trainers), so each admin run leaves one "QA Test Trainer" behind. Set `RUN_CREATE_TESTS=false` to skip the tests that create records.
+- **It never deletes or edits existing data.** The create / edit / delete tests change only the "QA Test" records they create themselves, and delete them again. Trainers are never deleted by design (admins make them inactive to keep history), and a new trainer stays Pending until it verifies its email, so each admin run leaves one Pending "QA Test Trainer" behind. Set `RUN_CREATE_TESTS=false` to skip the tests that create records.
 - Tests tagged **`@known-bug`** check the *correct* behaviour for a bug already filed in Jira. They fail while the bug is open and start passing once it is fixed. Run `npm run test:stable` to leave them out.
 
 ## Profile-completion gate (important)

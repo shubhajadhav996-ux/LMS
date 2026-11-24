@@ -1,5 +1,5 @@
 import { test, expect } from '@playwright/test';
-import { letterStamp, openAdmin, rows, modalForm, filterByText, rowAction, waitApi, api } from './admin-helpers';
+import { letterStamp, openAdmin, rows, modalForm, filterByText, rowAction, waitApi } from './admin-helpers';
 
 test.describe('Admin: Trainers', () => {
   test.beforeEach(async ({ page }) => {
@@ -27,7 +27,7 @@ test.describe('Admin: Trainers', () => {
     await f.getByRole('button', { name: 'Cancel' }).click();
   });
 
-  test('create and edit a "QA Test" trainer (then remove it)', async ({ page }) => {
+  test('create and edit a "QA Test" trainer', async ({ page }) => {
     const stamp = Date.now().toString().slice(-8);
     const name = `QA Test Trainer ${letterStamp()}`;
     const email = `qa.test.trainer.${stamp}@example.com`;
@@ -65,11 +65,19 @@ test.describe('Admin: Trainers', () => {
     await expect(page.getByText('Mumbai').first()).toBeVisible();
     await expect(page.getByText('Maharashtra').first()).toBeVisible();
 
-    // The admin UI has no Delete for trainers. Remove the QA record through the API if the backend allows it.
-    const id = cr.url() && (await cr.json().catch(() => null))?.data?.trainer?._id;
-    if (id) {
-      const del = await api(page, 'DELETE', `/trainers/${id}`);
-      test.info().annotations.push({ type: 'cleanup', description: `DELETE /trainers/${id} -> ${del.status}` });
+    // Trainers are never deleted (kept for history); a new trainer stays Pending until they verify their email.
+    await expect(rowAction(rows(page).filter({ hasText: email }), 'Delete Trainer')).toHaveCount(0);
+  });
+
+  // By design trainers are made inactive instead of deleted, so their history is kept.
+  // This only checks the controls; it never changes a real trainer's status.
+  test('trainers have no Delete; verified trainers get an active / inactive switch', async ({ page }) => {
+    await expect(page.locator('main tbody [title="Delete Trainer"]')).toHaveCount(0);
+    const toggles = page.locator('main tbody').locator('[title="Click to make this trainer inactive"], [title="Click to make this trainer active"]');
+    await expect(toggles.first()).toBeVisible();
+    const pending = rows(page).filter({ has: page.locator('[title="Awaiting account verification"]') }).first();
+    if (await pending.count()) {
+      await expect(pending.locator('[title^="Click to make this trainer"]')).toHaveCount(0);
     }
   });
 });
